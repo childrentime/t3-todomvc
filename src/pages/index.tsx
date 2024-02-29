@@ -19,7 +19,7 @@ export default function Home() {
   const { data: sessionData } = useSession();
   const allTasks = api.post.all.useQuery(undefined, {
     staleTime: 3000,
-    enabled: !!sessionData
+    enabled: !!sessionData,
   });
 
   const [text, setText] = useState("");
@@ -154,8 +154,10 @@ export default function Home() {
           }
           return t.completed;
         })
+        // @ts-expect-error ignore
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         .map((t) => t.id) as string[];
-      deleteCloudTodos.mutate({ids: ids })
+      deleteCloudTodos.mutate({ ids: ids });
     }
   };
 
@@ -192,11 +194,11 @@ export default function Home() {
           </div>
           <div
             className="flex flex-1 flex-col justify-center text-neutral-400 max-md:max-w-full"
-            onClick={async  () => {
-              if(!sessionData){
+            onClick={async () => {
+              if (!sessionData) {
                 await signIn();
               }
-              setLocal(false)
+              setLocal(false);
             }}
           >
             <div className="items-center bg-zinc-100 pb-5 pl-16 pr-16 pt-8 max-md:max-w-full max-md:px-5">
@@ -226,6 +228,7 @@ export default function Home() {
           {todos.map(
             (todo) =>
               !todo.deleted && (
+                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
                 <Fragment key={todo.randomId}>
                   <div className="relative flex w-full justify-between gap-5 text-stone-300 max-md:max-w-full max-md:flex-wrap">
                     <div className="flex justify-between gap-2">
@@ -240,6 +243,7 @@ export default function Home() {
                         alt="completed"
                         width={64}
                         height={61}
+                        // @ts-expect-error ignore
                         onClick={() => handleCompleted(todo)}
                       />
                       <div
@@ -256,6 +260,7 @@ export default function Home() {
                       height={32}
                       priority
                       onClick={() => {
+                        // @ts-expect-error ignore
                         void handleDelete(todo);
                       }}
                     />
