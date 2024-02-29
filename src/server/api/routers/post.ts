@@ -1,36 +1,68 @@
 import { z } from "zod";
 
-import {
-  createTRPCRouter,
-  protectedProcedure,
-  publicProcedure,
-} from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 export const postRouter = createTRPCRouter({
-  hello: publicProcedure
-    .input(z.object({ text: z.string() }))
-    .query(({ input }) => {
-      return {
-        greeting: `Hello ${input.text}`,
-      };
-    }),
-
   create: protectedProcedure
-    .input(z.object({ name: z.string().min(1) }))
+    .input(
+      z.object({
+        value: z.string(),
+        completed: z.boolean(),
+        deleted: z.boolean(),
+        randomId: z.string(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
-      // simulate a slow db call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
       return ctx.db.post.create({
         data: {
-          name: input.name,
+          ...input,
           createdBy: { connect: { id: ctx.session.user.id } },
         },
       });
     }),
 
-  getLatest: protectedProcedure.query(({ ctx }) => {
-    return ctx.db.post.findFirst({
+    delete: protectedProcedure
+    .input(
+      z.object({
+        ids: z.array(z.string())
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.db.post.updateMany({
+        where: {
+          id: {
+            in: input.ids
+          }
+        },
+        data: {
+          deleted: true,
+        },
+      });
+    }),
+  
+
+  edit: protectedProcedure
+    .input(
+      z.object({
+        value: z.string(),
+        completed: z.boolean(),
+        deleted: z.boolean(),
+        randomId: z.string(),
+        id: z.string(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { id, ...rest } = input;
+      return ctx.db.post.update({
+        data: {
+          ...rest,
+        },
+        where: { id, createdById: ctx.session.user.id },
+      });
+    }),
+
+  all: protectedProcedure.query(({ ctx }) => {
+    return ctx.db.post.findMany({
       orderBy: { createdAt: "desc" },
       where: { createdBy: { id: ctx.session.user.id } },
     });

@@ -17,6 +17,9 @@ const config = {
     locales: ["en"],
     defaultLocale: "en",
   },
+  images: {
+   unoptimized: true
+  },
 };
 
 export default config;
