@@ -1,12 +1,12 @@
-import { signIn, signOut, useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import Head from "next/head";
 import Image from "next/image";
 import logo from "../assets/logo.jpg";
 import { nanoid } from "nanoid";
 
 import { api } from "~/utils/api";
-import { type ChangeEvent, useState, Fragment } from "react";
-import { useLocalStorage } from "@reactuses/core";
+import { type ChangeEvent, useState, Fragment, useEffect, useRef } from "react";
+import { useElementVisibility, useLocalStorage } from "@reactuses/core";
 
 interface Todo {
   value: string;
@@ -21,6 +21,29 @@ export default function Home() {
     staleTime: 3000,
     enabled: !!sessionData,
   });
+  const inifiteQuery = api.post.inifinite.useInfiniteQuery(
+    {
+      limit: 10,
+    },
+    {
+      getNextPageParam: (lastPage) => lastPage.nextCursor,
+      refetchOnWindowFocus: false,
+    },
+  );
+
+  const length = inifiteQuery.data?.pages.length;
+
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible] = useElementVisibility(ref);
+
+  useEffect(() => {
+    if (visible) {
+      void inifiteQuery.fetchNextPage();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  const posts = inifiteQuery.data?.pages ?? [];
 
   const [text, setText] = useState("");
   const [local, setLocal] = useState(true);
@@ -284,31 +307,16 @@ export default function Home() {
             <div className="grow">Clear Completed</div>
           </div>
         </div>
+        <div>
+          {posts.map((ps) => {
+            const { items } = ps;
+            return items.map((item) => {
+              return <div key={item.id} className="mt-10 mb-10">{item.value}</div>;
+            });
+          })}
+          <div ref={ref} />
+        </div>
       </div>
     </>
-  );
-}
-
-function AuthShowcase() {
-  const { data: sessionData } = useSession();
-
-  const { data: secretMessage } = api.post.getSecretMessage.useQuery(
-    undefined, // no input
-    { enabled: sessionData?.user !== undefined },
-  );
-
-  return (
-    <div className="flex flex-col items-center justify-center gap-4">
-      <p className="text-center text-2xl text-white">
-        {sessionData && <span>Logged in as {sessionData.user?.name}</span>}
-        {secretMessage && <span> - {secretMessage}</span>}
-      </p>
-      <button
-        className="rounded-full bg-white/10 px-10 py-3 font-semibold text-white no-underline transition hover:bg-white/20"
-        onClick={sessionData ? () => void signOut() : () => void signIn()}
-      >
-        {sessionData ? "Sign out" : "Sign in"}
-      </button>
-    </div>
   );
 }

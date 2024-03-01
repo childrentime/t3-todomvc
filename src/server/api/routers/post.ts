@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "~/server/api/trpc";
+import { db } from "~/server/db";
 
 export const postRouter = createTRPCRouter({
   create: protectedProcedure
@@ -21,25 +26,24 @@ export const postRouter = createTRPCRouter({
       });
     }),
 
-    delete: protectedProcedure
+  delete: protectedProcedure
     .input(
       z.object({
-        ids: z.array(z.string())
+        ids: z.array(z.string()),
       }),
     )
     .mutation(async ({ ctx, input }) => {
       return ctx.db.post.updateMany({
         where: {
           id: {
-            in: input.ids
-          }
+            in: input.ids,
+          },
         },
         data: {
           deleted: true,
         },
       });
     }),
-  
 
   edit: protectedProcedure
     .input(
@@ -71,4 +75,30 @@ export const postRouter = createTRPCRouter({
   getSecretMessage: protectedProcedure.query(() => {
     return "you can now see this secret message!";
   }),
+
+  inifinite: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).nullish(),
+        cursor: z.string().nullish(), // <-- "cursor" needs to exist, but can be any type
+      }),
+    )
+    .query(async (opts) => {
+      const { input } = opts;
+      const limit = input.limit ?? 5;
+      const {  cursor } = input;
+      const items = await db.post.findMany({
+        take: limit + 1, // get an extra item at the end which we'll use as next cursor
+        cursor:  cursor ? { id:  cursor } : undefined,
+      });
+      let nextCursor: string | undefined = undefined;
+      if (items.length > limit) {
+        const nextItem = items.pop();
+        nextCursor = nextItem!.id;
+      }
+      return {
+        items,
+        nextCursor,
+      };
+    }),
 });
