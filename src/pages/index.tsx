@@ -31,14 +31,18 @@ export default function Home() {
     },
   );
 
-  const length = inifiteQuery.data?.pages.length;
 
   const ref = useRef<HTMLDivElement>(null);
   const [visible] = useElementVisibility(ref);
 
   useEffect(() => {
+    if(!allTasks.data?.length){
+      return;
+    }
     if (visible) {
-      void inifiteQuery.fetchNextPage();
+      void inifiteQuery.fetchNextPage().then(res => {
+        console.log('res',res.hasNextPage)
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [visible]);
